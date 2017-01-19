@@ -5,7 +5,7 @@ function deriv2;
 function fdxy;
 function fdxz;
 //resolution
-int n = 16;
+int n = 32;
 //graphing parameters
 float x1= -4;
 float x2 = 4;
@@ -21,7 +21,7 @@ void setup() {
   size(1000, 600, P3D);
   //this is the string that is the actual function we want to solve
   //this will be solved f = 0
-  String funct = "sin(x)+sin(y)+sin(z)";
+  String funct = "(sin(x)+sin(y)+sin(z))";
   //sets up differentiation rules
   setHash();
   //create the function
@@ -38,14 +38,12 @@ void setup() {
   //turn on lights
   lights();
 }
-float rot = 0;
 //draw gets called once a second (or less often if it takes more than a second to execute)
 void draw() {
-  if (!mousePressed) rot+=PI/120;
   //set the perspective
   float fov = PI/3;
   float cameraZ = (height/2.0) / tan(fov/2.0);
-  //perspective(fov, float(width)/float(height), cameraZ/10.0, cameraZ*10.0);
+  perspective(fov, float(width)/float(height), cameraZ/10.0, cameraZ*10.0);
   //this makes things get drawn in the right order
   hint(ENABLE_DEPTH_TEST);
   hint(ENABLE_DEPTH_SORT);
@@ -73,7 +71,7 @@ void draw() {
   //rotate the 3D graphing window
   //rotateX(3*PI/4);
   rotateX(1*PI/4);
-  rotateZ(rot);
+  rotateZ(millis()*PI/4000);
   //scale down so the graph doesn't go all the way to the edge
   scale(.7);
   //draw green axis
@@ -93,9 +91,18 @@ void draw() {
   int[][][] lastsz = new int[n+1][n+1][];
   int[][][] firstsyz = new int[n+1][n+1][];
   int[][][] lastsyz = new int[n+1][n+1][];
+  int[][][] firstsysz = new int[n+1][n+1][];
+  int[][][] lastsysz = new int[n+1][n+1][];
+  int[][][] firstsysyz = new int[n+1][n+1][];
+  int[][][] lastsysyz = new int[n+1][n+1][];
+  int[][][] firstszsy = new int[n+1][n+1][];
+  int[][][] lastszsy = new int[n+1][n+1][];
   int[][][] connectsy = new int[n+1][n+1][];
   int[][][] connectsz = new int[n+1][n+1][];
   int[][][] connectsyz = new int[n+1][n+1][];
+  int[][][] connectsysz = new int[n+1][n+1][];
+  int[][][] connectsysyz = new int[n+1][n+1][];
+  int[][][] connectszsy = new int[n+1][n+1][];
   //used to prevent polygons from being draw multiple times
   boolean[][][] doys = new boolean[n+1][n+1][];
   boolean[][][] dozs = new boolean[n+1][n+1][];
@@ -141,196 +148,206 @@ void draw() {
     } else {
       oldValsyz = new float[0];
     }
-    //move the matrix, this was used for some older graphing
-    pushMatrix();
-    translate(0, 0, z);
-    {
-      //lengths of arrays
-      //sets of 2 points corrospond
-      int tlength = (vals.length)/2;
-      int plength = (oldVals.length)/2;
-      int zlength = (oldValsz.length)/2;
-      int yzlength = (oldValsyz.length)/2;
-      //use the clear finder the find which ranges get connected
-      //this is how it tells how to connect it up at the end
-      boolean[][] clears = calcer(vals, oldVals, oy, y, z, false);
-      boolean[][] zclears = calcer(vals, oldValsz, oz, z, y, true);
-      boolean[][] yzclears = calcer(vals, oldValsyz, oy, oz, y, false);
-      //create storing arrays for this slice
-      doys[iy][iz] = new boolean[tlength];
-      dozs[iy][iz] = new boolean[tlength];
-      doyzs[iy][iz] = new boolean[tlength];
-      firstsy[iy][iz] = new int[tlength];
-      lastsy[iy][iz] = new int[tlength];
-      firstsz[iy][iz] = new int[tlength];
-      lastsz[iy][iz] = new int[tlength];
-      firstsyz[iy][iz] = new int[tlength];
-      lastsyz[iy][iz] = new int[tlength];
-      connectsy[iy][iz] = new int[tlength];
-      connectsz[iy][iz] = new int[tlength];
-      connectsyz[iy][iz] = new int[tlength];
-      for (int n = 0; n<tlength; n++) {
-        //a lot of stuff here I used to use to draw things before I had the 3D polygon drawing.
-        /*ellipse(vals[2*n], y, .1, .1);
-         ellipse(vals[2*n+1], y, .1, .1);*/
-        //this takes the connections and finds the first and last things that are connect
-        int first = -1;
-        int last = -1;
-        int firstz = -1;
-        int lastz = -1;
-        int firstyz = -1;
-        int lastyz = -1;
-        boolean doprev = n>0;
-        boolean donext = n<tlength-1;
-        /*stroke(0, 255, 0);
-         ellipse(vals[n*2+1], y, (x2-x1)/128, (y2-y1)/128);
-         ellipse(vals[n*2], y, (x2-x1)/128, (y2-y1)/128);
-         stroke(0);*/
-        //find the first and last connections in y
-        for (int k = 0; k<plength; k++) {
-          if (clears[n][k]) {
-            if (first == -1) first = k;
-            last = k;
-          }
+    //lengths of arrays
+    //sets of 2 points corrospond
+    int tlength = (vals.length)/2;
+    int plength = (oldVals.length)/2;
+    int zlength = (oldValsz.length)/2;
+    int yzlength = (oldValsyz.length)/2;
+    //use the clear finder the find which ranges get connected
+    //this is how it tells how to connect it up at the end
+    boolean[][] clears = calcer(vals, oldVals);
+    boolean[][] zclears = calcer(vals, oldValsz);
+    boolean[][] yzclears = calcer(vals, oldValsyz);
+    boolean[][] yszclears = calcer(oldVals, oldValsyz);
+    boolean[][] ysyzclears = calcer(oldVals, oldValsz);
+    boolean[][] zsyclears = calcer(oldValsz, oldValsyz);
+    //create storing arrays for this slice
+    doys[iy][iz] = new boolean[tlength];
+    dozs[iy][iz] = new boolean[tlength];
+    doyzs[iy][iz] = new boolean[tlength];
+    firstsy[iy][iz] = new int[tlength];
+    lastsy[iy][iz] = new int[tlength];
+    firstsz[iy][iz] = new int[tlength];
+    lastsz[iy][iz] = new int[tlength];
+    firstsyz[iy][iz] = new int[tlength];
+    lastsyz[iy][iz] = new int[tlength];
+    connectsy[iy][iz] = new int[tlength];
+    connectsz[iy][iz] = new int[tlength];
+    connectsyz[iy][iz] = new int[tlength];
+    for (int n = 0; n<tlength; n++) {
+      //a lot of stuff here I used to use to draw things before I had the 3D polygon drawing.
+      /*ellipse(vals[2*n], y, .1, .1);
+       ellipse(vals[2*n+1], y, .1, .1);*/
+      //this takes the connections and finds the first and last things that are connect
+      int first = -1;
+      int last = -1;
+      int firstz = -1;
+      int lastz = -1;
+      int firstyz = -1;
+      int lastyz = -1;
+      boolean doprev = n>0;
+      boolean donext = n<tlength-1;
+      /*stroke(0, 255, 0);
+       ellipse(vals[n*2+1], y, (x2-x1)/128, (y2-y1)/128);
+       ellipse(vals[n*2], y, (x2-x1)/128, (y2-y1)/128);
+       stroke(0);*/
+      //find the first and last connections in y
+      for (int k = 0; k<plength; k++) {
+        if (clears[n][k]) {
+          if (first == -1) first = k;
+          last = k;
         }
-        //find the first and last connections in y
-        for (int k = 0; k<zlength; k++) {
-          if (zclears[n][k]) {
-            if (firstz == -1) firstz = k;
-            lastz = k;
-          }
-        }
-        //find the first and last connections in y and z
-        for (int k = 0; k<yzlength; k++) {
-          if (yzclears[n][k]) {
-            if (firstyz == -1) firstyz = k;
-            lastyz = k;
-          }
-        }
-        //find how ranges on the same slice connect
-        int connecty = -1;
-        int connectz = -1;
-        int connectyz = -1;
-        //only do this if it connects to one thing in that direction, and if it is the one before it doesn't connect
-        //the second test prevent double-drawing of polygons
-        if (first != -1 && (!doprev || !clears[n-1][first])) {
-          for (connecty = n; connecty<tlength && clears[connecty][first]; connecty++);
-          connecty--;
-        }
-        if (firstz != -1 && (!doprev || !zclears[n-1][firstz])) {
-          for (connectz = n; connectz<tlength && zclears[connectz][firstz]; connectz++);
-          connectz--;
-        }
-        if (firstyz != -1 && (!doprev || !yzclears[n-1][firstyz])) {
-          for (connectyz = n; connectyz<tlength && yzclears[connectyz][firstyz]; connectyz++);
-          connectyz--;
-        }
-        //save everything
-        doys[iy][iz][n] = first != -1 && (!doprev || !clears[n-1][first]);
-        dozs[iy][iz][n] = firstz != -1 && (!doprev || !zclears[n-1][firstz]);
-        doyzs[iy][iz][n] = firstyz != -1 && (!doprev || !yzclears[n-1][firstyz]);
-        firstsy[iy][iz][n] = first;
-        lastsy[iy][iz][n] = last;
-        firstsz[iy][iz][n] = firstz;
-        lastsz[iy][iz][n] = lastz;
-        firstsyz[iy][iz][n] = firstyz;
-        lastsyz[iy][iz][n] = lastyz;
-        connectsy[iy][iz][n] = connecty;
-        connectsz[iy][iz][n] = connectz;
-        connectsyz[iy][iz][n] = connectyz;
       }
+      //find the first and last connections in y
+      for (int k = 0; k<zlength; k++) {
+        if (zclears[n][k]) {
+          if (firstz == -1) firstz = k;
+          lastz = k;
+        }
+      }
+      //find the first and last connections in y and z
+      for (int k = 0; k<yzlength; k++) {
+        if (yzclears[n][k]) {
+          if (firstyz == -1) firstyz = k;
+          lastyz = k;
+        }
+      }
+      //find how ranges on the same slice connect
+      int connecty = n;
+      int connectz = n;
+      int connectyz = n;
+      //only do this if it connects to one thing in that direction, and if it is the one before it doesn't connect
+      //the second test prevent double-drawing of polygons
+      if (first>=0) {
+        for (connecty = n; connecty<tlength && clears[connecty][first]; connecty++);
+        connecty--;
+      }
+      if (firstz>=0) {
+        for (connectz = n; connectz<tlength && zclears[connectz][firstz]; connectz++);
+        connectz--;
+      }
+      if (firstyz>=0) {
+        for (connectyz = n; connectyz<tlength && yzclears[connectyz][firstyz]; connectyz++);
+        connectyz--;
+      }
+      //save everything
+      doys[iy][iz][n] = first != -1 && (!doprev || !clears[n-1][first]);
+      dozs[iy][iz][n] = firstz != -1 && (!doprev || !zclears[n-1][firstz]);
+      doyzs[iy][iz][n] = firstyz != -1 && (!doprev || !yzclears[n-1][firstyz]);
+      firstsy[iy][iz][n] = first;
+      lastsy[iy][iz][n] = last;
+      firstsz[iy][iz][n] = firstz;
+      lastsz[iy][iz][n] = lastz;
+      firstsyz[iy][iz][n] = firstyz;
+      lastsyz[iy][iz][n] = lastyz;
+      connectsy[iy][iz][n] = connecty;
+      connectsz[iy][iz][n] = connectz;
+      connectsyz[iy][iz][n] = connectyz;
     }
-    /*for (int k = 0; k<vals.length; k++) {
-     //println(vals[k], y1+i*(y2-y1)/(n));
-     ellipse(vals[k], y1+i*(y2-y1)/(n), 2.0/n, 2.0/n);
-     if (vals.length == oldVals.length) line(vals[k], y1+i*(y2-y1)/(n), oldVals[k], y1+(i-1)*(y2-y1)/(n));
-     else if (vals.length>oldVals.length) {
-     }
-     }*/
-    //pop matrix, not really used for anything
-    popMatrix();
   }
-  //actually draw the polygons
+  //actually create the polygons
   for (int i = 0; i<connectsy.length; i++) for (int k = 0; k<connectsy[0].length; k++) {
     y = y1+i*(y2-y1)/(n);
     oy = y1+(i+1)*(y2-y1)/(n);
     z = z1+k*(z2-z1)/(n);
     oz = z1+(k+1)*(z2-z1)/(n);
-    //go through all the ranges on this slice
-    for (int n = 0; n<doys[i][k].length; n++) {
-      //there is a big if-else thing here to find how everything connects
-      //I don't have every case done yet
-      if (doys[i][k][n]) {
-        //this is basically the last for the current +0 +0 slice
-        int cony = connectsy[i][k][n];
-        //these are the first and last to use on the +1 +0 slice
-        int yn = firstsy[i][k][n];
-        int yl = lastsy[i][k][cony];
-        if (dozs[i][k][n]) {
-          int conz = connectsz[i][k][n];
-          //get the first and last in z (+0 +1)
-          int zn = firstsz[i][k][n];
-          int zl = lastsz[i][k][conz];
-          if (doyzs[i][k][n]) {
-            int conyz = connectsyz[i][k][n];
-            //find them for +1 +1
-            int yzn = firstsyz[i][k][n];
-            int yzl = lastsyz[i][k][conyz];
-            //using these ranges, we can constuct some polygons representing the sides
-            /*sides.add(
-             new poly(sliceRoots[i][k][n*2], y, z, sliceRoots[i+1][k][yn*2], oy, z, sliceRoots[i+1][k+1][yzn*2], oy, oz, sliceRoots[i][k+1][zn*2], y, oz));*/
-            sides.add(
-              new poly(sliceRoots[i][k][cony*2+1], y, z, sliceRoots[i+1][k][yl*2+1], oy, z, sliceRoots[i+1][k+1][yzl*2+1], oy, oz, sliceRoots[i][k+1][zl*2+1], y, oz));
+    //these numbers tell which how far in the array has been paired
+    int tn = 0;
+    //these store the ranges that have not been connected too
+    int ylength = 0;
+    int zlength = 0;
+    int yzlength = 0;
+    if (i<connectsy.length-1) ylength = connectsy[i+1][k].length;
+    if (k<connectsy[0].length-1) zlength = connectsy[i][k+1].length;
+    if (i<connectsy.length-1 && k<connectsy[0].length-1) yzlength = connectsy[i+1][k+1].length;
+    boolean[] yused = new boolean[ylength];
+    boolean[] zused = new boolean[zlength];
+    boolean[] yzused = new boolean[yzlength];
+    for (int p = 0; p<ylength; p++) yused[p] = false;
+    for (int p = 0; p<zlength; p++) zused[p] = false;
+    for (int p = 0; p<yzlength; p++) yzused[p] = false;
+    //this loops through the ranges
+    for (tn = 0; tn<connectsy[i][k].length; tn++) {
+      int cony = connectsy[i][k][tn];
+      int conz = connectsz[i][k][tn];
+      int conyz = connectsyz[i][k][tn];
+      int con = larger(cony, larger(conz, conyz));
+      int yf = firstsy[i][k][tn];
+      int zf = firstsz[i][k][tn];
+      int yzf = firstsyz[i][k][tn];
+      int yl = lastsy[i][k][con];
+      int zl = lastsz[i][k][con];
+      int yzl = lastsyz[i][k][con];
+      if (yf != -1) {
+        if (zf != -1) {
+          if (yzf != -1) {
+            //there is a connection to +1 +1, +1 +0, and +0 +1
+            sides.add(new poly(sliceRoots[i][k][tn*2], y, z, sliceRoots[i+1][k][yf*2], oy, z, sliceRoots[i+1][k+1][yzf*2], oy, oz, sliceRoots[i][k+1][zf*2], y, oz));
+            sides.add(new poly(sliceRoots[i][k][con*2+1], y, z, sliceRoots[i+1][k][yl*2+1], oy, z, sliceRoots[i+1][k+1][yzl*2+1], oy, oz, sliceRoots[i][k+1][zl*2+1], y, oz));
+            fillGaps(new float[][]{sliceRoots[i][k], sliceRoots[i+1][k], sliceRoots[i+1][k+1], sliceRoots[i][k+1]}, 
+              new float[]{y, oy, oy, y}, new float[]{z, z, oz, oz}, new int[]{tn, yf, yzf, zf}, new int[]{con, yl, yzl, zl});
+            //set the things that are used
+            for (int p = yf; p<=yl; p++) yused[p] = true;
+            for (int p = zf; p<=zl; p++) zused[p] = true;
+            for (int p = yzf; p<=yzl; p++) yzused[p] = true;
           } else {
-            //add sides with one no +1 +1, makes two triangles and a closing quadrilateral
-            sides.add(
-              new poly(sliceRoots[i][k][n*2], y, z, sliceRoots[i+1][k][yn*2], oy, z, sliceRoots[i][k+1][zn*2], y, oz));
-            sides.add(
-              new poly(sliceRoots[i][k][cony*2+1], y, z, sliceRoots[i+1][k][yl*2+1], oy, z, sliceRoots[i][k+1][zl*2+1], y, oz));
-            sides.add(
-              new poly(sliceRoots[i+1][k][yn*2], oy, z, sliceRoots[i][k+1][zn*2], y, oz, sliceRoots[i][k+1][zl*2+1], y, oz, sliceRoots[i+1][k][yl*2+1], oy, z));
+            //there is a connection to +1 +0 and +0 +1
+            sides.add(new poly(sliceRoots[i][k][tn*2], y, z, sliceRoots[i+1][k][yf*2], oy, z, sliceRoots[i][k+1][zf*2], y, oz));
+            sides.add(new poly(sliceRoots[i][k][con*2+1], y, z, sliceRoots[i+1][k][yl*2+1], oy, z, sliceRoots[i][k+1][zl*2+1], y, oz));
+            sides.add(new poly(sliceRoots[i+1][k][yf*2], oy, z, sliceRoots[i][k+1][zf*2], y, oz, sliceRoots[i][k+1][zl*2+1], y, oz, sliceRoots[i+1][k][yl*2+1], oy, z));
+            //set the things that are used
+            for (int p = yf; p<=yl; p++) yused[p] = true;
+            for (int p = zf; p<=zl; p++) zused[p] = true;
           }
         } else {
-          //if there is a +1 +0 but no +0 +1
-          if (doyzs[i][k][n]) {
-            //if there is a +1 +1
-            int yzn = firstsyz[i][k][n];
-            int yzl = lastsyz[i][k][n];
-            sides.add(
-              new poly(sliceRoots[i][k][n*2], y, z, sliceRoots[i+1][k][yn*2], oy, z, sliceRoots[i+1][k+1][yzn*2], oy, oz));
-            sides.add(
-              new poly(sliceRoots[i][k][cony*2+1], y, z, sliceRoots[i+1][k][yl*2+1], oy, z, sliceRoots[i+1][k+1][yzl*2+1], oy, oz));
-            sides.add(
-              new poly(sliceRoots[i][k][n*2], y, z, sliceRoots[i+1][k+1][yzn*2], oy, oz, sliceRoots[i+1][k+1][yzl*2+1], oy, oz, sliceRoots[i][k][cony*2+1], y, z));
+          if (yzf != -1) {
+            //there is a connection to +1 +1 and +1 +0
+            sides.add(new poly(sliceRoots[i][k][tn*2], y, z, sliceRoots[i+1][k][yf*2], oy, z, sliceRoots[i+1][k+1][yzf*2], oy, oz));
+            sides.add(new poly(sliceRoots[i][k][con*2+1], y, z, sliceRoots[i+1][k][yl*2+1], oy, z, sliceRoots[i+1][k+1][yzl*2+1], oy, oz));
+            sides.add(new poly(sliceRoots[i+1][k+1][yzf*2], oy, oz, sliceRoots[i][k][tn*2], y, z, sliceRoots[i][k][con*2+1], y, z, sliceRoots[i+1][k+1][yzl*2+1], oy, oz));
+            //set the things that are used
+            for (int p = yf; p<=yl; p++) yused[p] = true;
+            for (int p = yzf; p<=yzl; p++) yzused[p] = true;
           } else {
-            //in this case, there is only a +0 +0 and a +1 +0
-            sides.add(
-              new poly(sliceRoots[i][k][n*2], y, z, sliceRoots[i][k][cony*2+1], y, z, sliceRoots[i+1][k][yl*2+1], oy, z, sliceRoots[i+1][k][yn*2], oy, z));
+            //there is a connection to +1 +0
+            sides.add(new poly(sliceRoots[i][k][tn*2], y, z, sliceRoots[i][k][con*2+1], y, z, sliceRoots[i+1][k][yl*2+1], oy, z, sliceRoots[i+1][k][yf*2], oy, z));
+            //set the things that are used
+            for (int p = yf; p<=yl; p++) yused[p] = true;
           }
         }
       } else {
-        //in this case there is no +1 +0
-        if (dozs[i][k][n]) {
-          //there is a +0 +1
-          int zn = firstsz[i][k][n];
-          int zl = lastsz[i][k][n];
-          int conz = connectsz[i][k][n];
-          if (doyzs[i][k][n]) {
-            //there is a +0 +0, +0 +1, and +1 +1
-            int yzn = firstsyz[i][k][n];
-            int yzl = lastsyz[i][k][n];
-            sides.add(
-              new poly(sliceRoots[i][k][n*2], y, z, sliceRoots[i][k+1][zn*2], y, oz, sliceRoots[i+1][k+1][yzn*2], oy, oz));
-            sides.add(
-              new poly(sliceRoots[i][k][conz*2+1], y, z, sliceRoots[i][k+1][zl*2+1], y, oz, sliceRoots[i+1][k+1][yzl*2+1], oy, oz));
-            sides.add(
-              new poly(sliceRoots[i][k][n*2], y, z, sliceRoots[i+1][k+1][yzn*2], oy, oz, sliceRoots[i+1][k+1][yzl*2+1], oy, oz, sliceRoots[i][k][conz*2+1], y, z));
+        if (zf != -1) {
+          if (yzf != -1) {
+            //connections to +0 +1 and +1 +1
+            sides.add(new poly(sliceRoots[i][k][tn*2], y, z, sliceRoots[i][k+1][zf*2], y, oz, sliceRoots[i+1][k+1][yzf*2], oy, oz));
+            sides.add(new poly(sliceRoots[i][k][con*2+1], y, z, sliceRoots[i][k+1][zl*2+1], y, oz, sliceRoots[i+1][k+1][yzl*2+1], oy, oz));
+            sides.add(new poly(sliceRoots[i][k][tn*2], y, z, sliceRoots[i][k][con*2+1], y, z, sliceRoots[i+1][k+1][yzl*2+1], oy, oz, sliceRoots[i+1][k+1][yzf*2], oy, oz));
+            //set the things that are used
+            for (int p = zf; p<=zl; p++) zused[p] = true;
+            for (int p = yzf; p<=yzl; p++) yzused[p] = true;
           } else {
-            //there are only +0 +0 and +0 +1
-            sides.add(
-              new poly(sliceRoots[i][k][n*2], y, z, sliceRoots[i][k][conz*2+1], y, z, sliceRoots[i][k+1][zl*2+1], y, oz, sliceRoots[i][k+1][zn*2], y, oz));
+            //connection to +0 +1
+            sides.add(new poly(sliceRoots[i][k][tn*2], y, z, sliceRoots[i][k][con*2+1], y, z, sliceRoots[i][k+1][zl*2+1], y, oz, sliceRoots[i][k+1][zf*2], y, oz));
+            //set the things that are used
+            for (int p = zf; p<=zl; p++) zused[p] = true;
+          }
+        } else {
+          if (yzf != -1) {
+            //connection to +1 +1
+            sides.add(new poly(sliceRoots[i][k][tn*2], y, z, sliceRoots[i][k][con*2+1], y, z, sliceRoots[i+1][k+1][yzl*2+1], oy, oz, sliceRoots[i+1][k+1][yzf*2], oy, oz));
+            //set the things that are used
+            for (int p = yzf; p<=yzl; p++) yzused[p] = true;
+          } else {
+            //no connections
           }
         }
+      }
+      tn = con;
+    }
+    //now we go through the things that were not already accounted for
+    for (int yn = 0; yn<yused.length; yn++) {
+      if (!yused[yn]) {
       }
     }
   }
@@ -339,6 +356,7 @@ void draw() {
   //if one really wanted to, one could use the implicit derivative to define NURBS surfaces
   fill(230);
   //noStroke();
+  println(sides.size());
   for (int i = 0; i<sides.size(); i++ ) {
     poly on = sides.get(i);
     beginShape();

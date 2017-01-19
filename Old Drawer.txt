@@ -1,0 +1,78 @@
+NOTE: This is some old code that I am replacing, but I will put it here as a backup
+//go through all the ranges on this slice
+    for (int n = 0; n<doys[i][k].length; n++) {
+      //there is a big if-else thing here to find how everything connects
+      //I don't have every case done yet
+      if (doys[i][k][n]) {
+        //this is basically the last for the current +0 +0 slice
+        int cony = connectsy[i][k][n];
+        //these are the first and last to use on the +1 +0 slice
+        int yn = firstsy[i][k][n];
+        int yl = lastsy[i][k][cony];
+        if (dozs[i][k][n]) {
+          int conz = connectsz[i][k][n];
+          //get the first and last in z (+0 +1)
+          int zn = firstsz[i][k][n];
+          int zl = lastsz[i][k][conz];
+          if (doyzs[i][k][n]) {
+            int conyz = connectsyz[i][k][n];
+            //find them for +1 +1
+            int yzn = firstsyz[i][k][n];
+            int yzl = lastsyz[i][k][conyz];
+            //using these ranges, we can constuct some polygons representing the sides
+            sides.add(
+              new poly(sliceRoots[i][k][n*2], y, z, sliceRoots[i+1][k][yn*2], oy, z, sliceRoots[i+1][k+1][yzn*2], oy, oz, sliceRoots[i][k+1][zn*2], y, oz));
+            sides.add(
+              new poly(sliceRoots[i][k][cony*2+1], y, z, sliceRoots[i+1][k][yl*2+1], oy, z, sliceRoots[i+1][k+1][yzl*2+1], oy, oz, sliceRoots[i][k+1][zl*2+1], y, oz));
+          } else {
+            //add sides with one no +1 +1, makes two triangles and a closing quadrilateral
+            sides.add(
+              new poly(sliceRoots[i][k][n*2], y, z, sliceRoots[i+1][k][yn*2], oy, z, sliceRoots[i][k+1][zn*2], y, oz));
+            sides.add(
+              new poly(sliceRoots[i][k][cony*2+1], y, z, sliceRoots[i+1][k][yl*2+1], oy, z, sliceRoots[i][k+1][zl*2+1], y, oz));
+            sides.add(
+              new poly(sliceRoots[i+1][k][yn*2], oy, z, sliceRoots[i][k+1][zn*2], y, oz, sliceRoots[i][k+1][zl*2+1], y, oz, sliceRoots[i+1][k][yl*2+1], oy, z));
+          }
+        } else {
+          //if there is a +1 +0 but no +0 +1
+          if (doyzs[i][k][n]) {
+            //if there is a +1 +1
+            int yzn = firstsyz[i][k][n];
+            int yzl = lastsyz[i][k][n];
+            sides.add(
+              new poly(sliceRoots[i][k][n*2], y, z, sliceRoots[i+1][k][yn*2], oy, z, sliceRoots[i+1][k+1][yzn*2], oy, oz));
+            sides.add(
+              new poly(sliceRoots[i][k][cony*2+1], y, z, sliceRoots[i+1][k][yl*2+1], oy, z, sliceRoots[i+1][k+1][yzl*2+1], oy, oz));
+            sides.add(
+              new poly(sliceRoots[i][k][n*2], y, z, sliceRoots[i+1][k+1][yzn*2], oy, oz, sliceRoots[i+1][k+1][yzl*2+1], oy, oz, sliceRoots[i][k][cony*2+1], y, z));
+          } else {
+            //in this case, there is only a +0 +0 and a +1 +0
+            sides.add(
+              new poly(sliceRoots[i][k][n*2], y, z, sliceRoots[i][k][cony*2+1], y, z, sliceRoots[i+1][k][yl*2+1], oy, z, sliceRoots[i+1][k][yn*2], oy, z));
+          }
+        }
+      } else {
+        //in this case there is no +1 +0
+        if (dozs[i][k][n]) {
+          //there is a +0 +1
+          int zn = firstsz[i][k][n];
+          int zl = lastsz[i][k][n];
+          int conz = connectsz[i][k][n];
+          if (doyzs[i][k][n]) {
+            //there is a +0 +0, +0 +1, and +1 +1
+            int yzn = firstsyz[i][k][n];
+            int yzl = lastsyz[i][k][n];
+            sides.add(
+              new poly(sliceRoots[i][k][n*2], y, z, sliceRoots[i][k+1][zn*2], y, oz, sliceRoots[i+1][k+1][yzn*2], oy, oz));
+            sides.add(
+              new poly(sliceRoots[i][k][conz*2+1], y, z, sliceRoots[i][k+1][zl*2+1], y, oz, sliceRoots[i+1][k+1][yzl*2+1], oy, oz));
+            sides.add(
+              new poly(sliceRoots[i][k][n*2], y, z, sliceRoots[i+1][k+1][yzn*2], oy, oz, sliceRoots[i+1][k+1][yzl*2+1], oy, oz, sliceRoots[i][k][conz*2+1], y, z));
+          } else {
+            //there are only +0 +0 and +0 +1
+            sides.add(
+              new poly(sliceRoots[i][k][n*2], y, z, sliceRoots[i][k][conz*2+1], y, z, sliceRoots[i][k+1][zl*2+1], y, oz, sliceRoots[i][k+1][zn*2], y, oz));
+          }
+        }
+      }
+    }

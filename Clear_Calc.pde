@@ -1,4 +1,4 @@
-boolean[][] calcer(float[] vals, float[] oldVals, float oy, float y, float z, boolean zdir) {
+boolean[][] calcer(float[] vals, float[] oldVals) {
   int tlength = (vals.length)/2;
   int plength = (oldVals.length)/2;
   boolean[][] clears = new boolean[tlength][];
