@@ -285,8 +285,10 @@ void draw() {
             //there is a connection to +1 +1, +1 +0, and +0 +1
             sides.add(new poly(sliceRoots[i][k][tn*2], y, z, sliceRoots[i+1][k][yf*2], oy, z, sliceRoots[i+1][k+1][yzf*2], oy, oz, sliceRoots[i][k+1][zf*2], y, oz));
             sides.add(new poly(sliceRoots[i][k][con*2+1], y, z, sliceRoots[i+1][k][yl*2+1], oy, z, sliceRoots[i+1][k+1][yzl*2+1], oy, oz, sliceRoots[i][k+1][zl*2+1], y, oz));
+            //fill the gaps between ranges, i.e. if con>tn, and yl>yf, then there is probably a hole that needs to be filled
+            //this usually happens when the number of ranges is changing in one or both directions
             fillGaps(new float[][]{sliceRoots[i][k], sliceRoots[i+1][k], sliceRoots[i+1][k+1], sliceRoots[i][k+1]}, 
-              new float[]{y, oy, oy, y}, new float[]{z, z, oz, oz}, new int[]{tn, yf, yzf, zf}, new int[]{con, yl, yzl, zl});
+              new float[]{y, oy, oy, y}, new float[]{z, z, oz, oz}, new int[]{tn, yf, yzf, zf}, new int[]{con, yl, yzl, zl}, 0);
             //set the things that are used
             for (int p = yf; p<=yl; p++) yused[p] = true;
             for (int p = zf; p<=zl; p++) zused[p] = true;
@@ -296,6 +298,9 @@ void draw() {
             sides.add(new poly(sliceRoots[i][k][tn*2], y, z, sliceRoots[i+1][k][yf*2], oy, z, sliceRoots[i][k+1][zf*2], y, oz));
             sides.add(new poly(sliceRoots[i][k][con*2+1], y, z, sliceRoots[i+1][k][yl*2+1], oy, z, sliceRoots[i][k+1][zl*2+1], y, oz));
             sides.add(new poly(sliceRoots[i+1][k][yf*2], oy, z, sliceRoots[i][k+1][zf*2], y, oz, sliceRoots[i][k+1][zl*2+1], y, oz, sliceRoots[i+1][k][yl*2+1], oy, z));
+            //fill the gaps. Because there is already a filled part, we won't fill the last edge
+            fillGaps(new float[][]{sliceRoots[i+1][k], sliceRoots[i][k], sliceRoots[i][k+1]}, 
+              new float[]{oy, y, y}, new float[]{z, z, oz}, new int[]{yf, tn, zf}, new int[]{yl, con, zl}, 1);
             //set the things that are used
             for (int p = yf; p<=yl; p++) yused[p] = true;
             for (int p = zf; p<=zl; p++) zused[p] = true;
