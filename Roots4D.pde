@@ -5,7 +5,7 @@ function deriv2;
 function fdxy;
 function fdxz;
 //resolution
-int n = 32;
+int n = 8;
 //graphing parameters
 float x1= -4;
 float x2 = 4;
@@ -70,7 +70,7 @@ void draw() {
   strokeWeight((x2-x1)/150);
   //rotate the 3D graphing window
   //rotateX(3*PI/4);
-  rotateX(1*PI/4);
+  rotateX(3*PI/4);
   rotateZ(millis()*PI/4000);
   //scale down so the graph doesn't go all the way to the edge
   scale(.7);
@@ -110,7 +110,7 @@ void draw() {
   //the actual roots of the function
   float[][][] sliceRoots = new float[n+1][n+1][];
   //go through different slices
-  for (int i = 0; i<n; i++) for (int k = 0; k<=n; k++) {
+  for (int i = 0; i<=n; i++) for (int k = 0; k<=n; k++) {
     //set the values of y and z
     y = y1+i*(y2-y1)/(n);
     z = z1+k*(z2-z1)/(n);
@@ -119,10 +119,8 @@ void draw() {
     //used to test bugs - there should never be an odd number of roots
     if (floor(vals.length/2.0)*2 != vals.length) println("odd");
     //set that as part of the array
-    sliceRoots[i+1][k] = vals;
-    //the first set in y is empty so that the edges get filled in.
-    //if we didn't do this, there would be a hole in the bottom of our file
-    if (i == 0) sliceRoots[i][k] = new float[0];
+    sliceRoots[i][k] = vals;
+    
   }
   //this is used to figure out how things connect
   for (int iy = 0; iy<=n; iy++) for (int iz = 0; iz<=n; iz++) {
@@ -162,7 +160,7 @@ void draw() {
     boolean[][] yszclears = calcer(oldVals, oldValsyz);
     boolean[][] ysyzclears = calcer(oldVals, oldValsz);
     boolean[][] zsyclears = calcer(oldValsz, oldValsyz);
-    //create storing arrays for this slice
+    //create storing arrays for this slice (though some corrospond to other things)
     doys[iy][iz] = new boolean[tlength];
     dozs[iy][iz] = new boolean[tlength];
     doyzs[iy][iz] = new boolean[tlength];
@@ -172,9 +170,18 @@ void draw() {
     lastsz[iy][iz] = new int[tlength];
     firstsyz[iy][iz] = new int[tlength];
     lastsyz[iy][iz] = new int[tlength];
+    firstsysz[iy][iz] = new int[plength];
+    lastsysz[iy][iz] = new int[plength];
+    firstsysyz[iy][iz] = new int[plength];
+    lastsysyz[iy][iz] = new int[plength];
+    firstszsy[iy][iz] = new int[zlength];
+    lastszsy[iy][iz] = new int[zlength];
     connectsy[iy][iz] = new int[tlength];
     connectsz[iy][iz] = new int[tlength];
     connectsyz[iy][iz] = new int[tlength];
+    connectsysz[iy][iz] = new int[plength];
+    connectsysyz[iy][iz] = new int[plength];
+    connectszsy[iy][iz] = new int[zlength];
     for (int n = 0; n<tlength; n++) {
       //a lot of stuff here I used to use to draw things before I had the 3D polygon drawing.
       /*ellipse(vals[2*n], y, .1, .1);
@@ -244,6 +251,61 @@ void draw() {
       connectsy[iy][iz][n] = connecty;
       connectsz[iy][iz][n] = connectz;
       connectsyz[iy][iz][n] = connectyz;
+    }
+    //now we have to do everything again starting with +1 +0 and connecting to +1 +1 (ysz) and +0 +1 (ysyz)
+    for (int n = 0; n<plength; n++) {
+      int firstysz = -1;
+      int lastysz = -1;
+      int firstysyz = -1;
+      int lastysyz = -1;
+      boolean doprev = n>0;
+      for (int k = 0; k<yzlength; k++) {
+        if (yszclears[n][k]) {
+          if (firstysz == -1) firstysz = k;
+          lastysz = k;
+        }
+      }
+      for (int k = 0; k<zlength; k++) {
+        if (ysyzclears[n][k]) {
+          if (firstysyz == -1) firstysyz = k;
+          lastysyz = k;
+        }
+      }
+      int connectysz = n;
+      int connectysyz = n;
+      if (firstysz>=0) {
+        for (connectysz = n; connectysz<plength && yszclears[connectysz][firstysz]; connectysz++);
+        connectysz--;
+      }
+      if (firstysyz>=0) {
+        for (connectysyz = n; connectysyz<plength && ysyzclears[connectysyz][firstysyz]; connectysyz++);
+        connectysyz--;
+      }
+      firstsysz[iy][iz][n] = firstysz;
+      lastsysz[iy][iz][n] = lastysz;
+      firstsysyz[iy][iz][n] = firstysyz;
+      lastsysyz[iy][iz][n] = lastysyz;
+      connectsysz[iy][iz][n] = connectysz;
+      connectsysyz[iy][iz][n] = connectysyz;
+    }
+    //now with the ranges +0 +1, connecting to +1 +1 (zsy)
+    for (int n = 0; n<zlength; n++) {
+      int firstzsy = -1;
+      int lastzsy = -1;
+      for (int k = 0; k<yzlength; k++) {
+        if (zsyclears[n][k]) {
+          if (firstzsy == -1) firstzsy = k;
+          lastzsy = k;
+        }
+      }
+      int connectzsy = n;
+      if (firstzsy>=0) {
+        for (connectzsy = n; connectzsy<zlength && zsyclears[connectzsy][firstzsy]; connectzsy++);
+        connectzsy--;
+      }
+      firstszsy[iy][iz][n] = firstzsy;
+      lastszsy[iy][iz][n] = lastzsy;
+      connectszsy[iy][iz][n] = connectzsy;
     }
   }
   //actually create the polygons
@@ -353,6 +415,53 @@ void draw() {
     //now we go through the things that were not already accounted for
     for (int yn = 0; yn<yused.length; yn++) {
       if (!yused[yn]) {
+        int conz = connectsysz[i][k][yn];
+        int conyz = connectsysyz[i][k][yn];
+        int con = larger(conz, conyz);
+        int zf = firstsysz[i][k][yn];
+        int yzf = firstsysyz[i][k][yn];
+        int zl = lastsysz[i][k][con];
+        int yzl = lastsysyz[i][k][con];
+        if (zf != -1) {
+          if (yzf != -1) {
+            //we are on +1 +0, connections to +1 +1 and +0 +1
+            sides.add(new poly(sliceRoots[i+1][k][yn*2], oy, z, sliceRoots[i+1][k+1][zf*2], oy, oz, sliceRoots[i][k+1][yzf*2], y, oz));
+            sides.add(new poly(sliceRoots[i+1][k][con*2+1], oy, z, sliceRoots[i+1][k+1][zl*2+1], oy, oz, sliceRoots[i][k+1][yzl*2+1], y, oz));
+            sides.add(new poly(sliceRoots[i+1][k][yn*2], oy, z, sliceRoots[i][k+1][yzf*2], y, oz, sliceRoots[i][k+1][yzl*2+1], y, oz, sliceRoots[i+1][k][con*2+1], oy, z));
+            //set the ranges that are used
+            for (int p = yn; p<=con; p++) yused[p] = true;
+            for (int p = zf; p<=zl; p++) yzused[p] = true;
+            for (int p = yzf; p<=yzl; p++) zused[p] = true;
+          } else {
+            //connections to +1 +1
+            sides.add(new poly(sliceRoots[i+1][k][yn*2], oy, z, sliceRoots[i+1][k+1][zf*2], oy, oz, sliceRoots[i+1][k+1][zl*2+1], oy, oz, sliceRoots[i+1][k][con*2+1], oy, z));
+            //set the ranges that are used
+            for (int p = yn; p<=con; p++) yused[p] = true;
+            for (int p = zf; p<=zl; p++) yzused[p] = true;
+          }
+        } else {
+          if (yzf != -1) {
+            //connection from +1 +0 to +0 +1
+            sides.add(new poly(sliceRoots[i+1][k][yn*2], oy, z, sliceRoots[i][k+1][yzf*2], y, oz, sliceRoots[i][k+1][yzl*2+1], y, oz, sliceRoots[i+1][k][con*2+1], oy, z));
+            for (int p = yn; p<=con; p++) yused[p] = true;
+            for (int p = yzf; p<=yzl; p++) zused[p] = true;
+          }
+        }
+        yn = con;
+      }
+    }
+    for (int zn = 0; zn<zused.length; zn++) {
+      if (!zused[zn]) {
+        println("z", y, z);
+        int con = connectszsy[i][k][zn];
+        int yf = firstszsy[i][k][zn];
+        int yl = lastszsy[i][k][con];
+        if (yf != -1) {
+          //there is a connection from +0 +1 to +1 +1
+          sides.add(new poly(sliceRoots[i][k+1][zn*2], y, oz, sliceRoots[i+1][k+1][yf*2], oy, oz, sliceRoots[i+1][k+1][yl*2+1], oy, oz, sliceRoots[i][k+1][con*2+1], y, oz));
+          for (int p = zn; p<=con; p++) zused[p] = true;
+        }
+        zn = con;
       }
     }
   }
