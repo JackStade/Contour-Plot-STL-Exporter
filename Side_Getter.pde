@@ -301,7 +301,7 @@ void getSides() {
           if (yzf != -1) {
             //there is a connection to +1 +1, +1 +0, and +0 +1
             sides.add(new poly(sliceRoots[i][k][tn*2], y, z, sliceRoots[i+1][k][yf*2], oy, z, sliceRoots[i+1][k+1][yzf*2], oy, oz, sliceRoots[i][k+1][zf*2], y, oz));
-            println(con, yl, yzl, zl);
+            //println(con, yl, yzl, zl);
             sides.add(new poly(sliceRoots[i][k][con*2+1], y, z, sliceRoots[i+1][k][yl*2+1], oy, z, sliceRoots[i+1][k+1][yzl*2+1], oy, oz, sliceRoots[i][k+1][zl*2+1], y, oz));
             //fill the gaps between ranges, i.e. if con>tn, and yl>yf, then there is probably a hole that needs to be filled
             //this usually happens when the number of ranges is changing in one or both directions
@@ -410,7 +410,6 @@ void getSides() {
     }
     for (int zn = 0; zn<zused.length; zn++) {
       if (!zused[zn]) {
-        println("z", y, z);
         int con = connectszsy[i][k][zn];
         int yf = firstszsy[i][k][zn];
         int yl = lastszsy[i][k][con];
@@ -421,6 +420,18 @@ void getSides() {
         }
         zn = con;
       }
+    }
+  }
+  //filter through the sides and turn quadrilaterals into 2 triangles
+  ArrayList<poly> store = sides;
+  sides = new ArrayList<poly>();
+  for (int i = 0; i<store.size(); i++) {
+    poly on = store.get(i);
+    if (on.xs.length>3) {
+      sides.add(new poly(on.xs[0], on.ys[0], on.zs[0], on.xs[1], on.ys[1], on.zs[1], on.xs[2], on.ys[2], on.zs[2]));
+      sides.add(new poly(on.xs[2], on.ys[2], on.zs[2], on.xs[3], on.ys[3], on.zs[3], on.xs[0], on.ys[0], on.zs[0]));
+    } else {
+      sides.add(on);
     }
   }
 }

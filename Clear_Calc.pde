@@ -6,7 +6,7 @@ boolean[][] calcer(float[] vals, float[] oldVals) {
   for (int n = 0; n<tlength; n++) {
     boolean[] tclears = new boolean[plength];
     for (int k = 0; k<plength; k++) {
-      tclears[k] = (vals[n*2]<oldVals[k*2+1] && oldVals[k*2]<vals[n*2+1]);
+      tclears[k] = (oldVals[k*2+1]-vals[n*2]>0 && vals[n*2+1]-oldVals[k*2]>0);
     }
     clears[n] = tclears;
   }

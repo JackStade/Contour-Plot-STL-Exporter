@@ -9,7 +9,7 @@ function fdxz;
 //resolution
 int n = 32;
 //graphing parameters
-float x1= -4;
+float x1 = -4;
 float x2 = 4;
 float y1 = -4;
 float y2 = 4;
@@ -18,6 +18,11 @@ float z2 = 4;
 //stores the polygons
 ArrayList<poly> sides = new ArrayList<poly>();
 String funct = "1";
+//this is the texture for the shapes
+PImage texture;
+//these are used to map the texture onto the surface
+int[] us = {0, 20, 20, 0};
+int[] vs = {0, 0, 20, 20};
 //setup() used to initialized things
 void setup() {
   //create a window for drawing with an opengl 3D renderer.
@@ -31,10 +36,10 @@ void setup() {
   //sets up differentiation rules
   setHash();
   setf(funct);
+  //initialize the texture
+  texture = loadImage("Texture.png");
   //set the framerate
   frameRate(60);
-  //turn on lights
-  lights();
 }
 //draw gets called 60 time a second
 void draw() {
@@ -64,7 +69,6 @@ void draw() {
   //set the stroke weight so lines aren't to huge
   strokeWeight((x2-x1)/150);
   //rotate the 3D graphing window
-  //rotateX(3*PI/4);
   rotateX(1*PI/4);
   rotateZ(millis()*PI/4000);
   //scale down so the graph doesn't go all the way to the edge
@@ -77,17 +81,18 @@ void draw() {
   //set the line color to black
   stroke(0, 0, 0);
   //draw all the sides
-  //this is relative self-explanatory
+  //this is relatively self-explanatory
   //if one really wanted to, one could use the implicit derivative to define NURBS surfaces
   fill(230);
-  //noStroke();
+  noStroke();
   println(sides.size());
   for (int i = 0; i<sides.size(); i++ ) {
     poly on = sides.get(i);
     beginShape();
+    texture(texture);
     int len = on.xs.length;
     for (int k = 0; k<len; k++) {
-      vertex(on.xs[k], on.ys[k], on.zs[k]);
+      vertex(on.xs[k], on.ys[k], on.zs[k], us[k], vs[k]);
     }
     //vertex(on.xs[0], on.ys[0]);
     endShape(CLOSE);
@@ -141,10 +146,32 @@ float[] critRoots(function f, function der, function d2, linear[] maps, float st
     roots.add(start);
   }
   for (int i = 1; i<crits.length; i++) {
-    //if any consecutive critical points have different signs, there is a roots that can be found with newton's method
+    //if any consecutive critical points have different signs, there is a root that can be found with newton's method
     if (evals[i-1]<0 ^ evals[i]<0) {
-      float s = (evals[i-1]-evals[i])/(crits[i-1]-crits[i]);
-      roots.add(root(f, der, maps, (-evals[i]/s)+crits[i], abs(crits[i-1]-crits[i])));
+      float ev1 = evals[i-1];
+      float ev2 = evals[i];
+      float p1 = crits[i-1];
+      float p2 = crits[i];
+      float s = (ev1-ev2)/(p1-p2);
+      //run bisection to cut the range down
+      while (p2-p1>2.0/n) {
+        s = (p1+p2)/2;//(ev1-ev2)/(p1-p2);
+        for (int k = 0; k<maps.length; k++) {
+          vals[k] = maps[k].get(s);
+        }
+        float evs = f.eval(vals);
+        if (evs == 0) {
+          p2 = s;
+          p1 = s;
+        } else if (ev1<0 ^ evs<0) {
+          ev2 = evs;
+          p2 = s;
+        } else {
+          ev1 = evs;
+          p1 = s;
+        }
+      }
+      roots.add(root(f, der, maps, s /*(-evals[i]/s)+crits[i]*/, abs(crits[i-1]-crits[i])));
       //if there are 3 consecutive points that have the same sign and the middle point is small enough, it is considered as a mono-root
     } else if (i<crits.length-1 && !(evals[i]<0 ^ evals[i+1]<0) && abs(evals[i])<(.5/n)) {
       roots.add(crits[i]-.5/n);
@@ -257,6 +284,12 @@ float[] roots(function f, function der, linear[] maps, float start, float end, b
   for (int i = 0; i<aroots.length; i++) aroots[i] = roots.get(i);
   //return it
   return aroots;
+}
+void mousePressed() {
+  noLoop();
+}
+void mouseReleased() {
+  loop();
 }
 void keyPressed() {
   if (key != CODED) {
